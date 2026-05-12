@@ -1,0 +1,223 @@
+# Create OnlineRetail HBase Table
+
+create 'online_retail_hbase', 'retail'
+
+list
+
+# Insert Online Retail Data
+
+put 'online_retail_hbase', '1001', 'retail:invoice_no', 'INV101'
+
+put 'online_retail_hbase', '1001', 'retail:stock_code', 'S101'
+
+put 'online_retail_hbase', '1001', 'retail:description', 'Laptop'
+
+put 'online_retail_hbase', '1001', 'retail:quantity', '2'
+
+put 'online_retail_hbase', '1001', 'retail:unit_price', '50000'
+
+put 'online_retail_hbase', '1001', 'retail:customer_id', 'C101'
+
+put 'online_retail_hbase', '1001', 'retail:country', 'India'
+
+put 'online_retail_hbase', '1002', 'retail:invoice_no', 'INV102'
+
+put 'online_retail_hbase', '1002', 'retail:stock_code', 'S102'
+
+put 'online_retail_hbase', '1002', 'retail:description', 'Mobile'
+
+put 'online_retail_hbase', '1002', 'retail:quantity', '3'
+
+put 'online_retail_hbase', '1002', 'retail:unit_price', '20000'
+
+put 'online_retail_hbase', '1002', 'retail:customer_id', 'C102'
+
+put 'online_retail_hbase', '1002', 'retail:country', 'USA'
+
+put 'online_retail_hbase', '1003', 'retail:invoice_no', 'INV103'
+
+put 'online_retail_hbase', '1003', 'retail:stock_code', 'S103'
+
+put 'online_retail_hbase', '1003', 'retail:description', 'Tablet'
+
+put 'online_retail_hbase', '1003', 'retail:quantity', '5'
+
+put 'online_retail_hbase', '1003', 'retail:unit_price', '10000'
+
+put 'online_retail_hbase', '1003', 'retail:customer_id', 'C103'
+
+put 'online_retail_hbase', '1003', 'retail:country', 'UK'
+
+scan 'online_retail_hbase'
+
+# Exit HBase Shell
+
+exit
+
+# Open Hive Shell
+
+hive
+
+# Create Database
+
+CREATE DATABASE retaildb;
+
+USE retaildb;
+
+# i. Create and Load Online Retail Table in Hive
+
+CREATE TABLE online_retail(
+
+invoice_no STRING,
+
+stock_code STRING,
+
+description STRING,
+
+quantity INT,
+
+unit_price INT,
+
+customer_id STRING,
+
+country STRING
+
+)
+
+ROW FORMAT DELIMITED
+
+FIELDS TERMINATED BY ',';
+
+LOAD DATA LOCAL INPATH '/home/cloudera/online_retail.csv'
+
+INTO TABLE online_retail;
+
+# Display Table Data
+
+SELECT * FROM online_retail;
+
+# j. Create Index on Online Retail Table
+
+CREATE INDEX retail_index
+
+ON TABLE online_retail(description)
+
+AS 'COMPACT'
+
+SHOW INDEXES ON online_retail;
+
+# k. Find Total and Average Sales
+
+SELECT SUM(quantity * unit_price) AS total_sales
+
+FROM online_retail;
+
+SELECT AVG(quantity * unit_price) AS average_sales
+
+FROM online_retail;
+
+# l. Find Order Details with Maximum Cost
+
+SELECT invoice_no,
+
+description,
+
+quantity,
+
+unit_price,
+
+(quantity * unit_price) AS total_cost
+
+FROM online_retail
+
+ORDER BY total_cost DESC
+
+LIMIT 1;
+
+# m. Find Customer Details with Maximum Order Total
+
+SELECT customer_id,
+
+SUM(quantity * unit_price) AS total_order
+
+FROM online_retail
+
+GROUP BY customer_id
+
+ORDER BY total_order DESC
+
+LIMIT 1;
+
+# n. Find Country with Maximum and Minimum Sale
+
+SELECT country,
+
+SUM(quantity * unit_price) AS total_sales
+
+FROM online_retail
+
+GROUP BY country
+
+ORDER BY total_sales DESC
+
+LIMIT 1;
+
+SELECT country,
+
+SUM(quantity * unit_price) AS total_sales
+
+FROM online_retail
+
+GROUP BY country
+
+ORDER BY total_sales ASC
+
+LIMIT 1;
+
+# o. Create External Hive Table Connected to HBase
+
+CREATE EXTERNAL TABLE online_retail_hive(
+
+invoice_no STRING,
+
+stock_code STRING,
+
+description STRING,
+
+quantity INT,
+
+unit_price INT,
+
+customer_id STRING,
+
+country STRING
+
+)
+
+STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler'
+
+WITH SERDEPROPERTIES (
+
+"hbase.columns.mapping" =
+
+":key,
+
+retail:stock_code,
+
+retail:description,
+
+retail:quantity,
+
+retail:unit_price,
+
+retail:customer_id,
+
+retail:country"
+
+)
+
+TBLPROPERTIES ("hbase.table.name" = "online_retail_hbase");
+
+# p. Display Records of OnlineRetail Table in HBase
+
+SELECT * FROM online_retail_hive;
